@@ -42,6 +42,7 @@ module play (
 );
   reg [31:0] tick_counter;
   wire [31:0] ticks_per_second = ticks_per_milli * 1000;
+  wire [31:0] freq32 = {22'b0, freq};
 
   always @(posedge clk) begin
     if (rst) begin
@@ -50,10 +51,10 @@ module play (
     end else if (freq == 0) begin
       sound <= 0;
     end else begin
-      tick_counter <= tick_counter + freq;
+      tick_counter <= tick_counter + freq32;
       if (tick_counter >= (ticks_per_second >> 1)) begin
         sound <= !sound;
-        tick_counter <= tick_counter + freq - (ticks_per_second >> 1);
+        tick_counter <= tick_counter + freq32 - (ticks_per_second >> 1);
       end
     end
   end
@@ -241,7 +242,7 @@ module simon (
 
           if (tone_sequence_counter == 4) begin
             // trembling sound
-            sound_freq <= GAMEOVER_TONES[3] - 16 + millis_counter[4:0];
+            sound_freq <= GAMEOVER_TONES[3] - 16 + {5'b0, millis_counter[4:0]};
             if (millis_counter == 1000) begin
               tone_sequence_counter <= 7;
               sound_freq <= 0;

@@ -1,3 +1,7 @@
+`default_nettype none
+
+/* verilator lint_off UNUSED */
+
 module tt_um_urish_simon (
 	input  wire [7:0] ui_in,	// Dedicated inputs
 	output wire [7:0] uo_out,	// Dedicated outputs
@@ -9,13 +13,20 @@ module tt_um_urish_simon (
 	input  wire       rst_n
 );
 
+  wire [3:0]led;
+  wire sound;
+
+  assign uo_out = { 3'b0, sound, led };
+  assign uio_oe = 0;
+  assign uio_out = 0;
+
   simon simon1 (
       .clk   (clk),
       .rst   (!rst_n),
       .ticks_per_milli (50),
       .btn   (ui_in[3:0]),
-      .led   (uo_out[3:0]),
-      .sound (uo_out[4])
+      .led   (led),
+      .sound (sound)
   );
 
 endmodule
