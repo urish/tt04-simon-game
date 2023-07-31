@@ -59,4 +59,4 @@ set ::env(DESIGN_IS_CORE) 0
 set ::env(RT_MAX_LAYER) {met4}
 
 # Increase target density to fit into a single tile
-set ::env(PL_TARGET_DENSITY) "0.65"
+set ::env(PL_TARGET_DENSITY) "0.72"

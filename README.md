@@ -1,6 +1,6 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/wokwi_test/badge.svg)
 
-# Simon Says for Tiny Tapeout
+# Simon Says Game for Tiny Tapeout
 
 TinyTapeout is an educational project that aims to make it easier and cheaper than ever to get your digital designs manufactured on a real chip.
 
@@ -22,4 +22,5 @@ The game continues until the user has made a mistake. Then a game over sound is 
 
 ## Online simulation
 
-You can play the game using the online Wokwi simulation at https://wokwi.com/projects/352319274216569857. The simulation also shows the wiring diagram.
+You can play the game using the online Wokwi simulation at https://wokwi.com/projects/371755521090136065. 
+The simulation also shows the wiring diagram.

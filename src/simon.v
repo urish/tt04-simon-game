@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: © 2022 Uri Shaked <uri@wokwi.com>
+// SPDX-FileCopyrightText: © 2023 Uri Shaked <uri@wokwi.com>
 // SPDX-License-Identifier: MIT
 
 /*
  * Simon Says game in Verilog. Wokwi Simulation project:
- * https://wokwi.com/projects/352319274216569857
+ * https://wokwi.com/projects/371755521090136065
  */
 
 `default_nettype none
@@ -19,19 +19,86 @@ module wokwi (
     output LED1,
     output LED2,
     output LED3,
-    output SND
+    output SND,
+    output SEG_A,
+    output SEG_B,
+    output SEG_C,
+    output SEG_D,
+    output SEG_E,
+    output SEG_F,
+    output SEG_G,
+    output DIG1,
+    output DIG2
 );
 
   simon simon1 (
-      .clk   (CLK),
-      .rst   (RST),
-      .ticks_per_milli (50),
-      .btn   ({BTN3, BTN2, BTN1, BTN0}),
-      .led   ({LED3, LED2, LED1, LED0}),
-      .sound (SND)
+      .clk      (CLK),
+      .rst      (RST),
+      .ticks_per_milli (16'd50),
+      .btn      ({BTN3, BTN2, BTN1, BTN0}),
+      .led      ({LED3, LED2, LED1, LED0}),
+      .segments_invert(1'b1), // For common anode 7-segment display
+      .segments({SEG_G, SEG_F, SEG_E, SEG_D, SEG_C, SEG_B, SEG_A}),
+      .segment_digits({DIG2, DIG1}),
+      .sound    (SND)
   );
 
 endmodule
+
+
+module score (
+    input wire clk,
+    input wire rst,
+    input wire ena,
+    input wire invert,
+    input wire inc,
+    output reg [6:0] segments,
+    output reg [1:0] digits
+);
+  reg active_digit = 0;
+  reg [3:0] ones;
+  reg [3:0] tens;
+  wire [3:0] digit_value = active_digit ? tens : ones;
+
+  always @(posedge clk) begin
+    active_digit = ~active_digit;
+
+    if (rst) begin
+      ones = 0;
+      tens = 0;
+    end else if (inc) begin
+      ones = ones + 1;
+      if (ones == 10) begin
+        ones = 0;
+        tens = tens + 1;
+        if (tens == 10) begin
+          tens = 0;
+        end
+      end
+    end
+
+    case(active_digit)
+      1'b0: digits = invert ? 2'b01 : 2'b10;
+      1'b1: digits = invert ? 2'b10 : 2'b01;
+    endcase
+
+    case (ena ? digit_value : 4'd15)
+      4'd0: segments = invert ? 7'b1000000 : 7'b0111111;
+      4'd1: segments = invert ? 7'b1111001 : 7'b0000110;
+      4'd2: segments = invert ? 7'b0100100 : 7'b1011011;
+      4'd3: segments = invert ? 7'b0110000 : 7'b1001111;
+      4'd4: segments = invert ? 7'b0011001 : 7'b1100110;
+      4'd5: segments = invert ? 7'b0010010 : 7'b1101101;
+      4'd6: segments = invert ? 7'b0000010 : 7'b1111101;
+      4'd7: segments = invert ? 7'b1111000 : 7'b0000111;
+      4'd8: segments = invert ? 7'b0000000 : 7'b1111111;
+      4'd9: segments = invert ? 7'b0010000 : 7'b1101111;
+      default: segments = invert ? 7'b1111111 : 7'b0000000;
+    endcase
+  end
+  
+endmodule
+
 
 module play (
     input wire clk,
@@ -66,8 +133,11 @@ module simon (
     input wire rst,
     input wire [15:0] ticks_per_milli,
     input wire [3:0] btn,
+    input wire segments_invert,
     output reg [3:0] led,
-    output wire sound
+    output wire sound,
+    output wire [6:0] segments,
+    output wire [1:0] segment_digits
 );
 
   localparam MAX_GAME_LEN = 32;
@@ -114,6 +184,9 @@ module simon (
 
   reg [1:0] next_random;
   reg [1:0] user_input;
+  reg score_inc;
+  reg score_rst;
+  reg score_ena;
 
   play play1 (
       .clk(clk),
@@ -121,6 +194,16 @@ module simon (
       .ticks_per_milli(ticks_per_milli),
       .freq(sound_freq),
       .sound(sound)
+  );
+
+  score score1 (
+      .clk(clk),
+      .rst(rst | score_rst),
+      .ena(score_ena),
+      .inc(score_inc),
+      .invert(segments_invert),
+      .segments(segments),
+      .digits(segment_digits)
   );
 
   always @(posedge clk) begin
@@ -134,9 +217,14 @@ module simon (
       state <= StatePowerOn;
       seq[0] <= 0;
       led <= 4'b0000;
+      score_inc <= 0;
+      score_rst <= 0;
+      score_ena <= 0;
     end else begin
       tick_counter <= tick_counter + 1;
       next_random  <= next_random + 1;
+      score_inc <= 0;
+      score_rst <= 0;
 
       if (tick_counter == ticks_per_milli) begin
         tick_counter   <= 0;
@@ -152,6 +240,7 @@ module simon (
             state <= StateInit;
             led <= 4'b0000;
             millis_counter <= 0;
+            score_ena <= 1;
           end
         end
         StateInit: begin
@@ -160,6 +249,7 @@ module simon (
           seq_counter <= 0;
           tone_sequence_counter <= 0;
           if (millis_counter == 500) begin
+            score_rst <= 1;
             state <= StatePlay;
           end
         end
@@ -212,6 +302,7 @@ module simon (
                 seq[seq_length] <= next_random;
                 seq_length <= seq_length + 1;
                 state <= StateNextLevel;
+                score_inc <= 1;
               end else begin
                 seq_counter <= seq_counter + 1;
                 state <= StateUserWait;
